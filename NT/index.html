@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Next Topper | Premium Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- First Time User Onboarding Modal -->
+    <div class="modal-overlay" id="onboarding-modal">
+        <!-- FIXED: Removed glass-panel for better contrast against the dark overlay -->
+        <div class="modal-content scale-in">
+            <div class="modal-header">
+                <h2>Welcome to Next Topper ✨</h2>
+                <p>Complete your profile to unlock premium learning.</p>
+            </div>
+            <form id="profile-form">
+                <div class="input-group">
+                    <label for="user-name">Full Name *</label>
+                    <input type="text" id="user-name" required placeholder="Enter your full name">
+                </div>
+                <div class="input-group">
+                    <label for="user-age">Age *</label>
+                    <input type="number" id="user-age" required min="5" max="100" placeholder="Enter your age">
+                </div>
+                <div class="input-group">
+                    <label for="user-image">Profile Image (Optional)</label>
+                    <input type="file" id="user-image" accept="image/*" class="file-input">
+                </div>
+                <button type="submit" class="btn primary-btn full-width">Launch Dashboard</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Header (Sticky & Glassmorphism) -->
+    <header class="app-header glass-header">
+        <div class="header-left">
+            <button class="profile-trigger scale-effect" id="profile-btn" aria-label="Open Profile"></button>
+        </div>
+        
+        <div class="header-center">
+            <h1>Next Topper</h1>
+        </div>
+        
+        <div class="header-right">
+            <label class="theme-switch" for="theme-toggle" aria-label="Toggle Dark Mode">
+                <input type="checkbox" id="theme-toggle">
+                <span class="slider round"></span>
+            </label>
+            <img src="NT/images/NTlogo.png" alt="Next Topper Logo" class="header-logo" onerror="this.style.display='none'">
+        </div>
+
+        <!-- Profile Panel -->
+        <div class="profile-panel glass-panel" id="profile-panel">
+            <div class="panel-header">
+                <div class="panel-avatar" id="panel-avatar"></div>
+                <div class="panel-info">
+                    <h3 id="panel-name">User Name</h3>
+                    <p id="panel-age">Age: --</p>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <button class="btn danger-btn full-width scale-effect" id="clear-data-btn">
+                    Reset App Data
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Application Content -->
+    <main class="container page-fade-in">
+        
+        <div class="search-container">
+            <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="search-input" placeholder="Search premium batches...">
+        </div>
+
+        <div class="tabs-container">
+            <button class="tab-btn active" data-tab="batches">All Batches</button>
+            <button class="tab-btn" data-tab="favorites">Favorites ❤️</button>
+        </div>
+
+        <div class="loading-container" id="loading-state">
+            <div class="modern-spinner"></div>
+            <p class="loading-text">Initializing System...</p>
+        </div>
+
+        <div class="status-message hidden" id="status-message"></div>
+
+        <div class="grid-container" id="batches-grid">
+            <!-- Dynamic Batch Cards Injected Here -->
+        </div>
+
+    </main>
+
+    <script src="verification.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

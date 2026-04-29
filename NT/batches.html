@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Details | Next Topper</title>
+    <link rel="stylesheet" href="batches.css">
+    
+    <!-- STRICT ROUTE PROTECTION: Runs immediately to prevent UI flash -->
+    <script src="verification.js"></script>
+    <script>
+        if (!window.Verification || !window.Verification.isVerified()) {
+            window.location.replace('index.html');
+        }
+    </script>
+</head>
+<body>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="fullscreen-state">
+        <div class="modern-spinner"></div>
+        <h2 class="loading-text">Initializing System...</h2>
+        <p class="text-muted">Fetching premium secure content</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-state" class="fullscreen-state hidden">
+        <div class="error-icon">
+            <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        </div>
+        <h2 class="error-text">Network Error</h2>
+        <p id="error-message" class="text-muted">Failed to retrieve batch data.</p>
+        <button id="retry-btn" class="btn primary-btn scale-effect">Try Again</button>
+        <button class="btn ghost-btn scale-effect" onclick="window.location.href='index.html'">Return Home</button>
+    </div>
+
+    <!-- Main Content App -->
+    <main id="app-content" class="hidden page-fade-in">
+        
+        <!-- Hero Section -->
+        <section class="hero-section" id="hero-section">
+            <div class="hero-overlay"></div>
+            
+            <!-- Top Navigation -->
+            <nav class="top-nav">
+                <button class="btn glass-btn scale-effect" onclick="window.location.href='index.html'">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    Back to Dashboard
+                </button>
+            </nav>
+
+            <!-- Hero Info -->
+            <div class="hero-content">
+                <h1 id="batch-title" class="batch-title">Loading...</h1>
+                <div class="hero-badges">
+                    <span class="glass-badge" id="badge-subjects">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                        <span>-- Subjects</span>
+                    </span>
+                    <span class="glass-badge highlight" id="badge-price">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                        <span>₹ --</span>
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dynamic Content Section -->
+        <section class="content-section">
+            
+            <!-- Tab Controls -->
+            <div class="tab-controls">
+                <button class="tab-btn active" data-target="tab-overview">Overview</button>
+                <button class="tab-btn" data-target="tab-subjects">Study Material</button>
+                <div class="tab-indicator"></div>
+            </div>
+
+            <!-- Tab Panels -->
+            <div class="tab-container">
+                
+                <!-- Overview Tab -->
+                <div id="tab-overview" class="tab-panel active page-fade-in">
+                    <div class="glass-panel overview-card">
+                        <h3 class="section-title">About this Batch</h3>
+                        <div id="batch-description" class="html-content">
+                            <!-- Injected HTML -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Study Material Tab -->
+                <div id="tab-subjects" class="tab-panel page-fade-in">
+                    <div id="subjects-container" class="subjects-list">
+                        <!-- Subject Cards Injected Here -->
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- Core Logic -->
+    <script src="batches.js"></script>
+</body>
+</html>
