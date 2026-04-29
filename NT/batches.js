@@ -1,217 +1,245 @@
-/**
- * BATCH DETAILS LOGIC
- * Handles Data Fetching, UI Rendering, Tab Switching, and Subject Accordions.
- */
-document.addEventListener("DOMContentLoaded", () => {
-    // 1. Initial State & DOM Elements
-    const urlParams = new URLSearchParams(window.location.search);
-    const batchId = urlParams.get('id');
+(function () {
+  const API_BASE = '/api'; // Adjust if needed
 
-    const DOM = {
-        loader: document.getElementById('loading-state'),
-        errorState: document.getElementById('error-state'),
-        errorMsg: document.getElementById('error-message'),
-        retryBtn: document.getElementById('retry-btn'),
-        appContent: document.getElementById('app-content'),
-        
-        hero: document.getElementById('hero-section'),
-        title: document.getElementById('batch-title'),
-        badgeSubjects: document.getElementById('badge-subjects'),
-        badgePrice: document.getElementById('badge-price'),
-        
-        tabBtns: document.querySelectorAll('.tab-btn'),
-        tabPanels: document.querySelectorAll('.tab-panel'),
-        
-        descContainer: document.getElementById('batch-description'),
-        subjectsContainer: document.getElementById('subjects-container')
-    };
+  // ---------- STATE ----------
+  let currentBatch = null;
+  let activeSubjectId = null;
+  let folderStack = []; // [{ id, title }]
+  let currentItems = [];
 
-    // SVG Icons
-    const ICONS = {
-        folder: `<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`,
-        chevron: `<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>`,
-        play: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>`
-    };
+  // ---------- DOM REFS ----------
+  const loader = document.getElementById('loader');
+  const app = document.getElementById('app');
+  const themeToggle = document.getElementById('theme-toggle');
+  const heroThumb = document.getElementById('hero-thumbnail');
+  const heroTitle = document.getElementById('hero-title');
+  const heroPrice = document.getElementById('hero-price');
+  const batchTitleHeader = document.getElementById('batch-title');
+  const descContainer = document.getElementById('description-container');
+  const subjectList = document.getElementById('subject-list');
+  const breadcrumb = document.getElementById('breadcrumb');
+  const fileGrid = document.getElementById('file-grid');
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.tab-panel');
 
-    // 2. Boot Application
-    const init = () => {
-        // Check Auth deeply again just in case inline script missed
-        if (!window.Verification || !window.Verification.isVerified()) {
-            window.location.replace('index.html');
-            return;
-        }
+  // ---------- UTILS ----------
+  const qs = (sel, parent = document) => parent.querySelector(sel);
+  const qsa = (sel, parent = document) => parent.querySelectorAll(sel);
 
-        if (!batchId) {
-            showError("Invalid Batch Reference.");
-            return;
-        }
+  // Theme
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }
 
-        applyTheme();
-        loadBatchData();
-        bindEvents();
-    };
+  function initTheme() {
+    const saved = localStorage.getItem('theme');
+    if (saved) return applyTheme(saved);
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(prefersDark ? 'dark' : 'light');
+  }
 
-    const applyTheme = () => {
-        const theme = localStorage.getItem("nt_theme");
-        if (theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
-            document.documentElement.setAttribute("data-theme", "dark");
-        }
-    };
+  themeToggle.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+  });
 
-    // 3. Fetch Data Logic
-    const loadBatchData = async () => {
-        showLoader();
-        try {
-            // Using the secure Proxy Fetch we built in verification.js
-            const url = `https://study-one-access.vercel.app/api/batches/${batchId}`;
-            const responseData = await window.Verification.secureFetch(url);
+  // Fetch helper
+  async function fetchAPI(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    return res.json();
+  }
 
-            if (responseData && responseData.success && responseData.data) {
-                renderUI(responseData.data);
-            } else {
-                throw new Error("Invalid Data Format Received.");
-            }
-        } catch (err) {
-            console.error(err);
-            showError(err.message === "Failed to fetch" ? "Network block detected. Cannot connect to server." : "Failed to load batch content.");
-        }
-    };
+  // Tabs
+  function switchTab(tabId) {
+    tabs.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabId));
+    panels.forEach(panel => panel.classList.toggle('active', panel.id === `${tabId}-panel`));
+  }
 
-    // 4. Render UI
-    const renderUI = (data) => {
-        // Handle variations in API structure safely
-        const details = data.details || data; 
-        const subjects = data.subjects ||[];
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
 
-        // A. Hero Section
-        DOM.title.textContent = details.title || "Premium Batch";
-        DOM.badgePrice.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> <span>₹ ${details.price || 'Free'}</span>`;
-        DOM.badgeSubjects.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> <span>${subjects.length} Subjects</span>`;
-        
-        if (details.thumbnail) {
-            DOM.hero.style.backgroundImage = `url('${details.thumbnail}')`;
-        } else {
-            // Fallback premium gradient if no image
-            DOM.hero.style.background = 'var(--brand-gradient)';
-        }
+  // ---------- RENDER HELPERS ----------
+  function renderHero(details) {
+    heroThumb.src = details.thumbnail || '';
+    heroTitle.textContent = details.title || 'Untitled Batch';
+    heroPrice.textContent = details.price ? `₹${details.price}` : '';
+    batchTitleHeader.textContent = details.title || 'Batch';
+  }
 
-        // B. Overview Tab
-        if (details.description) {
-            // Remove inline hardcoded styles from raw HTML for cleaner rendering
-            let cleanHTML = details.description.replace(/style="[^"]*"/g, "");
-            DOM.descContainer.innerHTML = cleanHTML;
-        } else {
-            DOM.descContainer.innerHTML = `<p class="text-muted">No overview provided for this batch.</p>`;
-        }
+  function renderDescription(descriptionHTML) {
+    descContainer.innerHTML = descriptionHTML || '<p>No description available.</p>';
+    // The CSS will auto-fix image overflow
+  }
 
-        // C. Subjects Tab
-        DOM.subjectsContainer.innerHTML = "";
-        if (subjects.length > 0) {
-            const fragment = document.createDocumentFragment();
-            subjects.forEach((sub, index) => {
-                const card = document.createElement('div');
-                card.className = 'subject-card';
-                card.dataset.id = sub.subject_id || index;
-                
-                // Simulate some internal topics for the accordion since API might just return names
-                const mockTopicsHTML = `
-                    <ul class="topic-list">
-                        <li class="topic-item">${ICONS.play} Chapter 1: Introduction</li>
-                        <li class="topic-item">${ICONS.play} Chapter 2: Core Concepts</li>
-                        <li class="topic-item" style="color: var(--brand-primary); cursor: pointer;">View all modules →</li>
-                    </ul>
-                `;
+  function renderSubjects(subjects) {
+    subjectList.innerHTML = '';
+    if (!subjects || subjects.length === 0) {
+      subjectList.innerHTML = '<li class="subject-item">No subjects</li>';
+      return;
+    }
+    subjects.forEach(sub => {
+      const li = document.createElement('li');
+      li.className = 'subject-item';
+      li.textContent = sub.subject_name;
+      li.dataset.subjectId = sub.subject_id;
+      li.addEventListener('click', () => selectSubject(sub.subject_id, sub.subject_name));
+      subjectList.appendChild(li);
+    });
+  }
 
-                const actualTopicsHTML = sub.topics 
-                    ? `<ul class="topic-list">${sub.topics.map(t => `<li class="topic-item">${ICONS.play} ${t.name || t}</li>`).join('')}</ul>` 
-                    : mockTopicsHTML;
+  function selectSubject(subjectId, subjectName) {
+    // Highlight active subject
+    qsa('.subject-item', subjectList).forEach(li => {
+      li.classList.toggle('active-subject', li.dataset.subjectId === subjectId);
+    });
+    activeSubjectId = subjectId;
+    // Reset folder stack to root (subject)
+    folderStack = [{ id: subjectId, title: subjectName }];
+    loadFolderContents(subjectId);
+    // Ensure study material panel is visible
+    switchTab('study-material');
+  }
 
-                card.innerHTML = `
-                    <div class="subject-header">
-                        <div class="subject-info">
-                            <div class="subject-icon">${ICONS.folder}</div>
-                            <div>
-                                <h4 class="subject-title">${sub.subject_name || 'Subject Name'}</h4>
-                                <p class="subject-subtitle">Premium Modules Available</p>
-                            </div>
-                        </div>
-                        <div class="subject-arrow">${ICONS.chevron}</div>
-                    </div>
-                    <div class="subject-content">
-                        ${actualTopicsHTML}
-                    </div>
-                `;
-                fragment.appendChild(card);
-            });
-            DOM.subjectsContainer.appendChild(fragment);
-        } else {
-            DOM.subjectsContainer.innerHTML = `
-                <div style="text-align: center; padding: 40px; background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px dashed var(--border-color);">
-                    <p class="text-muted">No study materials have been uploaded yet.</p>
-                </div>
-            `;
-        }
+  // ---------- FOLDER NAVIGATION ----------
+  async function loadFolderContents(folderId) {
+    try {
+      fileGrid.innerHTML = '<div class="folder-card"><span>Loading...</span></div>';
+      const data = await fetchAPI(`/folders/${folderId}`);
+      const items = data?.folders || data?.files || data || []; // flexible response
+      currentItems = items;
+      renderFolderItems(items);
+    } catch (err) {
+      console.error(err);
+      fileGrid.innerHTML = '<div class="file-card"><span>Failed to load.</span></div>';
+    }
+  }
 
-        // Transition out of Loading
-        DOM.loader.classList.add('hidden');
-        DOM.appContent.classList.remove('hidden');
-    };
+  function renderFolderItems(items) {
+    fileGrid.innerHTML = '';
+    if (!items.length) {
+      fileGrid.innerHTML = '<div class="file-card"><span>No content</span></div>';
+      return;
+    }
+    items.forEach(item => {
+      const card = document.createElement('div');
+      if (item.type === 'folder') {
+        card.className = 'folder-card';
+        card.innerHTML = `<div class="folder-icon"></div><div class="item-title">${item.title || item.folder_name || 'Folder'}</div>`;
+        card.addEventListener('click', () => navigateToFolder(item.folder_id || item.id, item.title || item.folder_name));
+      } else if (item.type === 'file') {
+        card.className = 'file-card';
+        const icon = item.stream_url ? (item.stream_url.includes('.m3u8') ? '🎬' : '▶️') : '📄';
+        card.innerHTML = `<div class="file-icon" style="font-size:2rem">${icon}</div><div class="item-title">${item.title || 'File'}</div>`;
+        card.addEventListener('click', () => handleFileClick(item));
+      }
+      fileGrid.appendChild(card);
+    });
+    updateBreadcrumb();
+  }
 
-    // 5. Events Binding
-    const bindEvents = () => {
-        // Tab Navigation
-        DOM.tabBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // Update Buttons
-                DOM.tabBtns.forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
+  function navigateToFolder(folderId, folderTitle) {
+    folderStack.push({ id: folderId, title: folderTitle });
+    loadFolderContents(folderId);
+  }
 
-                // Update Panels
-                const targetId = e.target.getAttribute('data-target');
-                DOM.tabPanels.forEach(panel => {
-                    if (panel.id === targetId) {
-                        panel.classList.add('active');
-                    } else {
-                        panel.classList.remove('active');
-                    }
-                });
-            });
-        });
+  function goBackToFolder(index) {
+    // index = position in folderStack to keep
+    folderStack = folderStack.slice(0, index + 1);
+    const currentFolder = folderStack[folderStack.length - 1];
+    loadFolderContents(currentFolder.id);
+  }
 
-        // Subject Accordion Delegation
-        DOM.subjectsContainer.addEventListener('click', (e) => {
-            const card = e.target.closest('.subject-card');
-            if (!card) return;
+  function updateBreadcrumb() {
+    breadcrumb.innerHTML = '';
+    folderStack.forEach((f, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'breadcrumb-btn';
+      btn.textContent = f.title;
+      btn.addEventListener('click', () => goBackToFolder(i));
+      if (i < folderStack.length - 1) {
+        breadcrumb.appendChild(btn);
+        breadcrumb.appendChild(document.createTextNode(' / '));
+      } else {
+        // current folder
+        const span = document.createElement('span');
+        span.className = 'breadcrumb-current';
+        span.textContent = f.title;
+        span.style.color = 'var(--text)';
+        breadcrumb.appendChild(span);
+      }
+    });
+  }
 
-            // Toggle logic
-            const isExpanded = card.classList.contains('expanded');
-            
-            // Optional: Close others
-            document.querySelectorAll('.subject-card').forEach(c => c.classList.remove('expanded'));
+  // ---------- FILE HANDLING ----------
+  function handleFileClick(file) {
+    if (file.stream_url) {
+      // Video
+      openVideoPlayer({
+        title: file.title || 'Video',
+        stream_url: file.stream_url,
+        thumbnail: file.thumbnail || ''
+      });
+    } else if (file.download_links && Array.isArray(file.download_links) && file.download_links.length) {
+      const firstLink = file.download_links[0];
+      if (typeof firstLink === 'string' && firstLink.includes('.pdf')) {
+        window.open(firstLink, '_blank');
+      } else {
+        // fallback: open first link
+        window.open(firstLink, '_blank');
+      }
+    } else {
+      // No stream, no download – maybe just show info or ignore
+      alert('No playable content available.');
+    }
+  }
 
-            if (!isExpanded) {
-                card.classList.add('expanded');
-            }
-        });
+  // ---------- INITIAL LOAD ----------
+  async function loadBatch() {
+    const params = new URLSearchParams(window.location.search);
+    const batchId = params.get('batch_id');
+    if (!batchId) {
+      loader.innerHTML = '<p style="color:var(--text)">Invalid batch ID.</p>';
+      return;
+    }
+    try {
+      const result = await fetchAPI(`/batches/${batchId}`);
+      const data = result.data;
+      currentBatch = data;
+      // Render hero
+      renderHero(data.details);
+      // Render description for overview
+      renderDescription(data.details.description);
+      // Render subjects in sidebar
+      renderSubjects(data.subjects);
+      // Hide loader, show app
+      loader.style.display = 'none';
+      app.style.display = 'block';
+    } catch (err) {
+      loader.innerHTML = '<p style="color:var(--text)">Failed to load batch. Please try again.</p>';
+      console.error(err);
+    }
+  }
 
-        // Retry Button
-        DOM.retryBtn.addEventListener('click', loadBatchData);
-    };
+  // ---------- VIDEO PLAYER BRIDGE ----------
+  function openVideoPlayer(config) {
+    if (window.VideoPlayer && typeof window.VideoPlayer.open === 'function') {
+      window.VideoPlayer.open(config);
+    } else {
+      alert('Video player not available.');
+    }
+  }
 
-    // Utility State Managers
-    const showLoader = () => {
-        DOM.loader.classList.remove('hidden');
-        DOM.errorState.classList.add('hidden');
-        DOM.appContent.classList.add('hidden');
-    };
+  // Start everything
+  initTheme();
+  loadBatch();
 
-    const showError = (message) => {
-        DOM.loader.classList.add('hidden');
-        DOM.appContent.classList.add('hidden');
-        DOM.errorMsg.textContent = message;
-        DOM.errorState.classList.remove('hidden');
-    };
-
-    // Run
-    init();
-});
+  // Expose for debugging (optional)
+  window.batchSystem = {
+    selectSubject,
+    loadFolderContents,
+    goBackToFolder
+  };
+})();
