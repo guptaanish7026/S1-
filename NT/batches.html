@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Details | Next Topper</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Load Verification Script immediately to prevent bypass -->
+    <script src="verification.js"></script>
+    <script>
+        // STRICT ROUTE PROTECTION
+        if (!window.Verification.isVerified()) {
+            window.location.href = 'index.html';
+        }
+    </script>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="app-header glass-header">
+        <div class="header-left">
+            <button class="btn fav-btn scale-effect" onclick="window.location.href='index.html'">
+                ← Back
+            </button>
+        </div>
+        <div class="header-center">
+            <h1>Next Topper</h1>
+        </div>
+        <div class="header-right">
+            <img src="NT/images/NTlogo.png" alt="Logo" class="header-logo" onerror="this.style.display='none'">
+        </div>
+    </header>
+
+    <main class="container page-fade-in" style="max-width: 900px;">
+        
+        <div id="loading-state" class="loading-container">
+            <div class="modern-spinner"></div>
+            <p class="loading-text">Loading Batch Data...</p>
+        </div>
+
+        <div id="batch-content" class="hidden">
+            <!-- Dynamic Data Injected Here -->
+        </div>
+
+    </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const batchId = urlParams.get('id');
+
+            if (!batchId) {
+                alert('No batch selected.');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const container = document.getElementById('batch-content');
+            const loader = document.getElementById('loading-state');
+
+            // Apply Theme
+            const theme = localStorage.getItem("nt_theme");
+            if (theme === "dark" || (!theme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+                document.documentElement.setAttribute("data-theme", "dark");
+            }
+
+            try {
+                // Fetch specific batch
+                const res = await fetch(`https://study-one-access.vercel.app/api/batches/${batchId}`);
+                const responseData = await res.json();
+                
+                if (responseData.success && responseData.data) {
+                    const data = responseData.data;
+                    const details = data.details;
+                    const subjects = data.subjects ||
