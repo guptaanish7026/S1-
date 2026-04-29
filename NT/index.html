@@ -3,38 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Next Topper | Batches</title>
+    <title>Next Topper | Premium Learning</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <!-- Onboarding Modal -->
     <div class="modal-overlay" id="onboarding-modal">
-        <div class="modal-content">
-            <h2>Welcome to Next Topper! 🚀</h2>
-            <p>Please set up your profile to continue.</p>
+        <div class="modal-content glass-effect">
+            <div class="modal-header">
+                <h2>Welcome to Next Topper 🚀</h2>
+                <p>Set up your profile to start learning.</p>
+            </div>
             <form id="profile-form">
                 <div class="input-group">
                     <label for="user-name">Full Name *</label>
-                    <input type="text" id="user-name" required placeholder="John Doe">
+                    <input type="text" id="user-name" required placeholder="Enter your name">
                 </div>
                 <div class="input-group">
                     <label for="user-age">Age *</label>
-                    <input type="number" id="user-age" required min="5" max="100" placeholder="18">
+                    <input type="number" id="user-age" required min="5" max="100" placeholder="Your age">
                 </div>
                 <div class="input-group">
                     <label for="user-image">Profile Image (Optional)</label>
-                    <input type="file" id="user-image" accept="image/*">
+                    <input type="file" id="user-image" accept="image/*" class="file-input">
                 </div>
-                <button type="submit" class="btn primary-btn full-width">Save Profile</button>
+                <button type="submit" class="btn primary-btn full-width">Continue to Dashboard</button>
             </form>
         </div>
     </div>
 
     <!-- Header -->
-    <header class="app-header">
+    <header class="app-header glass-header">
         <div class="header-left">
-            <button class="profile-trigger" id="profile-btn" aria-label="Open Profile">
+            <button class="profile-trigger scale-effect" id="profile-btn" aria-label="Open Profile">
                 <!-- Avatar injected via JS -->
             </button>
         </div>
@@ -48,10 +50,11 @@
                 <input type="checkbox" id="theme-toggle">
                 <span class="slider round"></span>
             </label>
+            <img src="NT/images/NTlogo.png" alt="Logo" class="header-logo" onerror="this.style.display='none'">
         </div>
 
         <!-- Profile Panel Dropdown -->
-        <div class="profile-panel" id="profile-panel">
+        <div class="profile-panel glass-effect" id="profile-panel">
             <div class="panel-header">
                 <div class="panel-avatar" id="panel-avatar"></div>
                 <div class="panel-info">
@@ -61,34 +64,44 @@
             </div>
             <div class="panel-body">
                 <h4>Recently Played</h4>
-                <p id="recently-played-text" class="text-muted">No batches played yet.</p>
+                <div class="recent-card" id="recently-played-card">
+                    <p id="recently-played-text" class="text-muted">No batches played yet.</p>
+                </div>
             </div>
             <div class="panel-footer">
-                <button class="btn danger-btn full-width" id="clear-data-btn">
-                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                    Clear Data
+                <button class="btn danger-btn full-width scale-effect" id="clear-data-btn">
+                    Clear Data & Reset
                 </button>
             </div>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="container">
+    <main class="container page-fade-in">
         
         <!-- Search -->
         <div class="search-container">
-            <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="text" id="search-input" placeholder="Search batches by title...">
+            <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="search-input" placeholder="Search for your next batch...">
         </div>
 
         <!-- Tabs -->
         <div class="tabs-container">
-            <button class="tab-btn active" data-tab="batches">Batches</button>
-            <button class="tab-btn" data-tab="favorites">Favorites</button>
+            <button class="tab-btn active" data-tab="batches">All Batches</button>
+            <button class="tab-btn" data-tab="favorites">Favorites ❤️</button>
+            <div class="tab-indicator"></div>
         </div>
 
+        <!-- Loading State -->
+        <div class="loading-container" id="loading-state">
+            <div class="modern-spinner"></div>
+            <p class="loading-text">Initializing System...</p>
+        </div>
+
+        <!-- Empty Status Message -->
+        <div class="status-message hidden" id="status-message"></div>
+
         <!-- Data Grid -->
-        <div class="status-message" id="status-message">Loading batches...</div>
         <div class="grid-container" id="batches-grid">
             <!-- Cards injected via JS -->
         </div>
@@ -97,4 +110,4 @@
 
     <script src="script.js"></script>
 </body>
-                      </html>
+    </html>
