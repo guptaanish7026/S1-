@@ -1,14 +1,14 @@
 document.addEventListener("DOMContentLoaded", () => {
     // State Management
     let user = JSON.parse(localStorage.getItem("nt_user"));
-    let favorites = JSON.parse(localStorage.getItem("nt_favorites")) || [];
+    let favorites = JSON.parse(localStorage.getItem("nt_favorites")) ||[];
     let recentlyPlayed = JSON.parse(localStorage.getItem("nt_recentlyPlayed")) || null;
-    let batches = [];
-    let activeTab = "batches"; // 'batches' | 'favorites'
+    let batches =[];
+    let activeTab = "batches"; 
     let searchQuery = "";
 
     // DOM Elements
-    const elements = {
+    const DOM = {
         modal: document.getElementById("onboarding-modal"),
         profileForm: document.getElementById("profile-form"),
         profileBtn: document.getElementById("profile-btn"),
@@ -22,70 +22,66 @@ document.addEventListener("DOMContentLoaded", () => {
         searchInput: document.getElementById("search-input"),
         tabBtns: document.querySelectorAll(".tab-btn"),
         grid: document.getElementById("batches-grid"),
+        loadingState: document.getElementById("loading-state"),
         statusMsg: document.getElementById("status-message")
     };
 
-    // Icons (SVGs)
+    // Icons Setup (Inline SVG for performance)
     const icons = {
-        study: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`,
-        favOutline: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`,
-        favFilled: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`
+        study: `<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`,
+        play: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>`
     };
 
-    // Initialize App
-    const init = () => {
-        initTheme();
+    // Initialize Application
+    const initApp = () => {
+        setupTheme();
         
         if (!user) {
-            elements.modal.classList.add("active");
+            DOM.modal.classList.add("active");
         } else {
             updateProfileUI();
         }
 
+        renderSkeleton();
         fetchBatches();
-        setupEventListeners();
+        bindEvents();
     };
 
     // ==========================================
     // THEME HANDLING
     // ==========================================
-    const initTheme = () => {
+    const setupTheme = () => {
         const savedTheme = localStorage.getItem("nt_theme");
-        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
         
-        const isDark = savedTheme === "dark" || (!savedTheme && systemPrefersDark);
-        
-        if (isDark) {
+        if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
             document.documentElement.setAttribute("data-theme", "dark");
-            elements.themeToggle.checked = true;
+            DOM.themeToggle.checked = true;
         }
     };
 
-    elements.themeToggle.addEventListener("change", (e) => {
-        if (e.target.checked) {
+    DOM.themeToggle.addEventListener("change", (e) => {
+        const theme = e.target.checked ? "dark" : "light";
+        if (theme === "dark") {
             document.documentElement.setAttribute("data-theme", "dark");
-            localStorage.setItem("nt_theme", "dark");
         } else {
             document.documentElement.removeAttribute("data-theme");
-            localStorage.setItem("nt_theme", "light");
         }
+        localStorage.setItem("nt_theme", theme);
     });
 
     // ==========================================
-    // USER PROFILE HANDLING
+    // USER PROFILE
     // ==========================================
-    elements.profileForm.addEventListener("submit", (e) => {
+    DOM.profileForm.addEventListener("submit", (e) => {
         e.preventDefault();
-        
         const name = document.getElementById("user-name").value.trim();
         const age = document.getElementById("user-age").value.trim();
         const fileInput = document.getElementById("user-image");
         
         if (fileInput.files && fileInput.files[0]) {
             const reader = new FileReader();
-            reader.onload = (event) => {
-                saveUser(name, age, event.target.result);
-            };
+            reader.onload = (event) => saveUser(name, age, event.target.result);
             reader.readAsDataURL(fileInput.files[0]);
         } else {
             saveUser(name, age, null);
@@ -95,119 +91,132 @@ document.addEventListener("DOMContentLoaded", () => {
     const saveUser = (name, age, image) => {
         user = { name, age, profileImage: image };
         localStorage.setItem("nt_user", JSON.stringify(user));
-        elements.modal.classList.remove("active");
+        DOM.modal.classList.remove("active");
         updateProfileUI();
     };
 
     const updateProfileUI = () => {
         if (!user) return;
-
         const initial = user.name.charAt(0).toUpperCase();
-        let avatarHTML = user.profileImage 
+        const avatarHTML = user.profileImage 
             ? `<img src="${user.profileImage}" alt="${user.name}" class="avatar">`
             : `<div class="avatar">${initial}</div>`;
 
-        elements.profileBtn.innerHTML = avatarHTML;
-        elements.panelAvatar.innerHTML = avatarHTML;
-        elements.panelName.textContent = user.name;
-        elements.panelAge.textContent = `Age: ${user.age}`;
+        DOM.profileBtn.innerHTML = avatarHTML;
+        DOM.panelAvatar.innerHTML = avatarHTML;
+        DOM.panelName.textContent = user.name;
+        DOM.panelAge.textContent = `Age: ${user.age}`;
 
         if (recentlyPlayed) {
-            elements.recentlyPlayedText.textContent = recentlyPlayed.title;
-            elements.recentlyPlayedText.style.color = 'var(--primary-color)';
-            elements.recentlyPlayedText.style.fontWeight = '600';
+            DOM.recentlyPlayedText.innerHTML = `${icons.play} ${recentlyPlayed.title}`;
+            DOM.recentlyPlayedText.style.color = 'var(--primary-color)';
+            DOM.recentlyPlayedText.style.display = 'flex';
+            DOM.recentlyPlayedText.style.alignItems = 'center';
+            DOM.recentlyPlayedText.style.gap = '8px';
         }
     };
 
-    // Panel Toggle & Click Outside
-    elements.profileBtn.addEventListener("click", (e) => {
+    // Toggle Profile Panel
+    DOM.profileBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        elements.profilePanel.classList.toggle("active");
+        DOM.profilePanel.classList.toggle("active");
     });
 
     document.addEventListener("click", (e) => {
-        if (!elements.profilePanel.contains(e.target) && e.target !== elements.profileBtn) {
-            elements.profilePanel.classList.remove("active");
+        if (!DOM.profilePanel.contains(e.target) && e.target !== DOM.profileBtn) {
+            DOM.profilePanel.classList.remove("active");
         }
     });
 
-    elements.clearDataBtn.addEventListener("click", () => {
-        if (confirm("Are you sure you want to clear all data? This cannot be undone.")) {
+    DOM.clearDataBtn.addEventListener("click", () => {
+        if (confirm("Are you sure you want to clear all local data? This action cannot be undone.")) {
             localStorage.clear();
             location.reload();
         }
     });
 
     // ==========================================
-    // API & DATA HANDLING
+    // API FETCH & SKELETON LOADER
     // ==========================================
+    const renderSkeleton = () => {
+        DOM.grid.innerHTML = Array(6).fill(`
+            <div class="skeleton-card">
+                <div class="skeleton-thumb"></div>
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line short"></div>
+            </div>
+        `).join("");
+    };
+
     const fetchBatches = async () => {
         try {
-            const response = await fetch("https://study-one-access.vercel.app/api/batches");
-            const result = await response.json();
+            const res = await fetch("https://study-one-access.vercel.app/api/batches");
+            const data = await res.json();
             
-            if (result.success && result.data) {
-                batches = result.data;
+            if (data.success && data.data) {
+                batches = data.data;
+                DOM.loadingState.classList.add("hidden");
                 renderBatches();
             } else {
-                throw new Error("Invalid data format");
+                throw new Error("Invalid format");
             }
         } catch (error) {
-            console.error("Error fetching batches:", error);
-            elements.statusMsg.textContent = "Failed to load batches. Please try again later.";
-            elements.statusMsg.classList.remove("hidden");
+            console.error(error);
+            DOM.loadingState.classList.add("hidden");
+            DOM.grid.innerHTML = "";
+            DOM.statusMsg.textContent = "Failed to initialize system. Please reload.";
+            DOM.statusMsg.classList.remove("hidden");
         }
     };
 
     // ==========================================
-    // RENDERING & FILTERING
+    // RENDER UI & FILTERING
     // ==========================================
     const renderBatches = () => {
         let filtered = batches;
 
-        // Apply Tab Filter
         if (activeTab === "favorites") {
-            filtered = filtered.filter(b => favorites.includes(b.batch_id));
+            filtered = filtered.filter(b => favorites.includes(String(b.batch_id)));
         }
 
-        // Apply Search Filter
         if (searchQuery) {
             filtered = filtered.filter(b => b.title.toLowerCase().includes(searchQuery.toLowerCase()));
         }
 
-        elements.grid.innerHTML = "";
+        DOM.grid.innerHTML = "";
 
         if (filtered.length === 0) {
-            elements.statusMsg.textContent = activeTab === "favorites" && !searchQuery 
-                ? "No favorite batches yet." 
+            DOM.statusMsg.textContent = activeTab === "favorites" && !searchQuery 
+                ? "No favorite batches found. Start adding some ❤️" 
                 : "No batches found matching your search.";
-            elements.statusMsg.classList.remove("hidden");
+            DOM.statusMsg.classList.remove("hidden");
             return;
         }
 
-        elements.statusMsg.classList.add("hidden");
+        DOM.statusMsg.classList.add("hidden");
 
         const fragment = document.createDocumentFragment();
 
         filtered.forEach(batch => {
-            const isFav = favorites.includes(batch.batch_id);
-            const card = document.createElement("div");
-            card.className = "batch-card";
+            const batchId = String(batch.batch_id);
+            const isFav = favorites.includes(batchId);
             
+            const card = document.createElement("div");
+            card.className = "batch-card scale-effect-card";
+            // NOTE: Description is completely removed per requirement
             card.innerHTML = `
-                <img src="${batch.thumbnail}" alt="${batch.title}" class="batch-thumb" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%25%22 height=%22100%25%22 viewBox=%220 0 800 400%22%3E%3Crect fill=%22%23e2e8f0%22 width=%22800%22 height=%22400%22/%3E%3Ctext fill=%22%2394a3b8%22 font-family=%22sans-serif%22 font-size=%2230%22 dy=%2210.5%22 font-weight=%22bold%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22%3ENo Image Available%3C/text%3E%3C/svg%3E'">
+                <div class="thumb-wrapper">
+                    <img src="${batch.thumbnail}" alt="Thumbnail" class="batch-thumb" loading="lazy">
+                    <span class="price-badge">₹${batch.price}</span>
+                </div>
                 <div class="batch-content">
-                    <div class="batch-header">
-                        <h3 class="batch-title">${batch.title}</h3>
-                        <span class="batch-price">₹${batch.price}</span>
-                    </div>
-                    <p class="batch-desc">${batch.description || "No description provided."}</p>
+                    <h3 class="batch-title">${batch.title}</h3>
                     <div class="batch-actions">
-                        <button class="btn primary-btn study-btn" data-id="${batch.batch_id}">
+                        <button class="btn primary-btn scale-effect study-btn" data-id="${batchId}">
                             ${icons.study} Study
                         </button>
-                        <button class="btn outline-btn fav-btn ${isFav ? 'favorited' : ''}" data-id="${batch.batch_id}">
-                            ${isFav ? icons.favFilled + ' Unfavorite' : icons.favOutline + ' Favorite'}
+                        <button class="btn fav-btn scale-effect ${isFav ? 'favorited' : ''}" data-id="${batchId}">
+                            ${isFav ? 'Unfavorite ❤️' : 'Favorite ♡'}
                         </button>
                     </div>
                 </div>
@@ -215,68 +224,78 @@ document.addEventListener("DOMContentLoaded", () => {
             fragment.appendChild(card);
         });
 
-        elements.grid.appendChild(fragment);
+        DOM.grid.appendChild(fragment);
     };
 
     // ==========================================
-    // EVENTS (Tabs, Search, Clicks)
+    // EVENTS (Tabs, Search, Actions)
     // ==========================================
-    const setupEventListeners = () => {
-        // Tab Switching
-        elements.tabBtns.forEach(btn => {
+    const bindEvents = () => {
+        // Tabs
+        DOM.tabBtns.forEach(btn => {
             btn.addEventListener("click", (e) => {
-                elements.tabBtns.forEach(b => b.classList.remove("active"));
+                DOM.tabBtns.forEach(b => b.classList.remove("active"));
                 e.target.classList.add("active");
                 activeTab = e.target.getAttribute("data-tab");
                 renderBatches();
             });
         });
 
-        // Search Input
-        elements.searchInput.addEventListener("input", (e) => {
+        // Search
+        DOM.searchInput.addEventListener("input", (e) => {
             searchQuery = e.target.value;
             renderBatches();
         });
 
-        // Event Delegation for Grid Buttons (Study / Favorite)
-        elements.grid.addEventListener("click", (e) => {
+        // Delegate Clicks for Buttons
+        DOM.grid.addEventListener("click", (e) => {
             const favBtn = e.target.closest(".fav-btn");
             const studyBtn = e.target.closest(".study-btn");
 
             if (favBtn) {
                 const id = favBtn.getAttribute("data-id");
-                toggleFavorite(id);
+                toggleFavorite(id, favBtn);
             }
 
             if (studyBtn) {
                 const id = studyBtn.getAttribute("data-id");
-                handleStudy(id);
+                handleStudyClick(id);
             }
         });
     };
 
-    const toggleFavorite = (id) => {
+    // Completely Fixed Favorite Logic
+    const toggleFavorite = (id, buttonElement) => {
         if (favorites.includes(id)) {
+            // Remove
             favorites = favorites.filter(favId => favId !== id);
+            buttonElement.classList.remove("favorited");
+            buttonElement.innerHTML = 'Favorite ♡';
         } else {
+            // Add
             favorites.push(id);
+            buttonElement.classList.add("favorited");
+            buttonElement.innerHTML = 'Unfavorite ❤️';
         }
+        
+        // Save to storage
         localStorage.setItem("nt_favorites", JSON.stringify(favorites));
-        renderBatches(); // Re-render to update UI and Tabs
+
+        // If user is currently inside the favorites tab, re-render immediately to reflect removal
+        if (activeTab === "favorites") {
+            renderBatches();
+        }
     };
 
-    const handleStudy = (id) => {
-        const batch = batches.find(b => b.batch_id === id);
+    const handleStudyClick = (id) => {
+        const batch = batches.find(b => String(b.batch_id) === id);
         if (batch) {
             recentlyPlayed = batch;
             localStorage.setItem("nt_recentlyPlayed", JSON.stringify(recentlyPlayed));
             updateProfileUI();
-            
-            // Visual feedback
-            alert(`Opening "${batch.title}" for study...`);
         }
     };
 
-    // Run Initialization
-    init();
+    // Boot App
+    initApp();
 });
