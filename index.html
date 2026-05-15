@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Proxy – Batches</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card-bg: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #79c0ff;
+            --success: #3fb950;
+            --error: #f85149;
+            --key-color: #79c0ff;
+            --string-color: #a5d6ff;
+            --number-color: #79c0ff;
+            --boolean-color: #ff7b72;
+            --null-color: #8b949e;
+            --bracket-color: #ffa657;
+            --pre-bg: #0d1117;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Consolas', 'Monaco',
+                'Courier New', monospace;
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px 0 20px;
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+
+        header .endpoint {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        header .endpoint .method {
+            background: #238636;
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        header .endpoint .url {
+            color: var(--accent);
+            word-break: break-all;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+
+        button {
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 10px 24px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card-bg);
+            color: var(--text);
+        }
+
+        button:hover {
+            border-color: var(--accent);
+            color: var(--accent-hover);
+        }
+
+        button.primary {
+            background: #238636;
+            border-color: #238636;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        button.primary:hover {
+            background: #2ea043;
+            border-color: #2ea043;
+            color: #fff;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .status-dot.loading {
+            background: #d29922;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        .status-dot.success {
+            background: var(--success);
+        }
+
+        .status-dot.error {
+            background: var(--error);
+        }
+
+        @keyframes pulse {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        .response-container {
+            background: var(--pre-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .response-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .response-header .lang-tag {
+            background: #30363d;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            color: var(--text);
+            letter-spacing: 0.3px;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            font-size: 0.7rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .copy-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .copy-btn.copied {
+            border-color: var(--success);
+            color: var(--success);
+            background: rgba(63, 185, 80, 0.1);
+        }
+
+        pre {
+            margin: 0;
+            padding: 20px;
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 60vh;
+            font-size: 0.82rem;
+            line-height: 1.7;
+            color: var(--text);
+            white-space: pre-wrap;
+            word-break: break-word;
+            scroll-behavior: smooth;
+        }
+
+        pre::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        pre::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        pre::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 3px;
+        }
+        pre::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+
+        .json-key {
+            color: var(--key-color);
+        }
+        .json-string {
+            color: var(--string-color);
+        }
+        .json-number {
+            color: var(--number-color);
+        }
+        .json-boolean {
+            color: var(--boolean-color);
+        }
+        .json-null {
+            color: var(--null-color);
+            font-style: italic;
+        }
+        .json-bracket {
+            color: var(--bracket-color);
+        }
+
+        .error-box {
+            background: rgba(248, 81, 73, 0.08);
+            border: 1px solid rgba(248, 81, 73, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            color: var(--error);
+        }
+        .error-box .error-title {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 6px;
+        }
+        .error-box .error-detail {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 16px;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top-color: #d29922;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 600px) {
+            header h1 {
+                font-size: 1.3rem;
+            }
+            pre {
+                font-size: 0.7rem;
+                padding: 14px;
+            }
+            button {
+                padding: 8px 16px;
+                font-size: 0.8rem;
+            }
+            .status-bar {
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📡 API Proxy Viewer</h1>
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <!-- This relative URL works with the local proxy server -->
+                <span class="url">/api/batches</span>
+            </div>
+        </header>
+
+        <div class="controls">
+            <button class="primary" id="fetchBtn" onclick="fetchData()">
+                ⚡ Fetch Data
+            </button>
+            <button id="clearBtn" onclick="clearOutput()">
+                🗑 Clear
+            </button>
+            <button id="copyBtn" class="copy-btn" onclick="copyToClipboard()" disabled>
+                📋 Copy JSON
+            </button>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-indicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Idle — waiting for request</span>
+            </div>
+            <span id="responseMeta"></span>
+        </div>
+
+        <div class="response-container">
+            <div class="response-header">
+                <span>📄 Response Body</span>
+                <span class="lang-tag">JSON</span>
+            </div>
+            <pre id="output"><span style="color: #8b949e;">// Click "Fetch Data" to load JSON from the API
+// (ensure the local proxy server is running on port 3000)</span></pre>
+        </div>
+
+        <footer>
+            Served via local proxy — API: <code style="color: var(--accent);">nt.rarestudy.in/api/batches</code>
+        </footer>
+    </div>
+
+    <script>
+        // This relative path works because the page is served by the same Express server
+        // that proxies /api/* requests to https://nt.rarestudy.in
+        const API_URL = '/api/batches';
+
+        const outputEl = document.getElementById('output');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const responseMeta = document.getElementById('responseMeta');
+        const fetchBtn = document.getElementById('fetchBtn');
+        const copyBtn = document.getElementById('copyBtn');
+
+        let lastRawJSON = '';
+
+        async function fetchData() {
+            setLoadingState(true);
+            outputEl.innerHTML = '<span style="color: #d29922;">⏳ Fetching data...</span>';
+            copyBtn.disabled = true;
+            lastRawJSON = '';
+
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+
+                const elapsed = Math.round(performance.now() - startTime);
+                const statusCode = response.status;
+                const statusOk = response.ok;
+
+                if (!statusOk) {
+                    throw new Error(`Server responded with status ${statusCode}`);
+                }
+
+                const data = await response.json();
+                lastRawJSON = JSON.stringify(data, null, 2);
+
+                statusDot.className = 'status-dot success';
+                statusText.textContent = `✅ ${statusCode} OK — ${elapsed}ms`;
+                responseMeta.textContent = `${statusCode} | ${new Date().toLocaleTimeString()} | ${elapsed}ms`;
+
+                renderJSON(data);
+                copyBtn.disabled = false;
+
+            } catch (err) {
+                const elapsed = Math.round(performance.now() - startTime);
+                statusDot.className = 'status-dot error';
+                statusText.textContent = '❌ Request failed';
+                responseMeta.textContent = `Error | ${elapsed}ms`;
+
+                let errorMessage = err.message || 'Unknown error';
+                if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+                    errorMessage = 'Network error – is the local proxy server running on port 3000?<br>Start it with: <code>node server.js</code>';
+                }
+
+                outputEl.innerHTML = `
+                    <div class="error-box">
+                        <div class="error-title">🚫 Request Failed</div>
+                        <div class="error-detail">${errorMessage}</div>
+                    </div>`;
+                console.error('Fetch error:', err);
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        function renderJSON(data) {
+            const jsonString = JSON.stringify(data, null, 2);
+            const highlighted = syntaxHighlight(jsonString);
+            outputEl.innerHTML = highlighted;
+        }
+
+        function syntaxHighlight(json) {
+            let escaped = json
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            escaped = escaped.replace(
+                /("(?:[^"\\]|\\.)*")(\s*:)/g,
+                '<span class="json-key">$1</span>$2'
+            );
+
+            escaped = escaped.replace(
+                /:(\s*)("(?:[^"\\]|\\.)*")/g,
+                ':$1<span class="json-string">$2</span>'
+            );
+
+            escaped = escaped.replace(
+                /(:|,|\[|\s)(\s*)(-?\d+\.?\d*(?:[eE][+-]?\d+)?)/g,
+                '$1$2<span class="json-number">$3</span>'
+            );
+
+            escaped = escaped.replace(
+                /(:|,|\[|\s)(\s*)(true|false)/g,
+                '$1$2<span class="json-boolean">$3</span>'
+            );
+
+            escaped = escaped.replace(
+                /(:|,|\[|\s)(\s*)(null)/g,
+                '$1$2<span class="json-null">$3</span>'
+            );
+
+            escaped = escaped.replace(
+                /([{}[\]])/g,
+                '<span class="json-bracket">$1</span>'
+            );
+
+            return escaped;
+        }
+
+        function setLoadingState(isLoading) {
+            if (isLoading) {
+                fetchBtn.disabled = true;
+                statusDot.className = 'status-dot loading';
+                statusText.textContent = '⏳ Fetching...';
+                responseMeta.textContent = '';
+            } else {
+                fetchBtn.disabled = false;
+            }
+        }
+
+        function clearOutput() {
+            outputEl.innerHTML = '<span style="color: #8b949e;">// Output cleared. Click "Fetch Data" to reload.</span>';
+            statusDot.className = 'status-dot';
+            statusText.textContent = 'Idle — waiting for request';
+            responseMeta.textContent = '';
+            copyBtn.disabled = true;
+            lastRawJSON = '';
+        }
+
+        async function copyToClipboard() {
+            if (!lastRawJSON) return;
+            try {
+                await navigator.clipboard.writeText(lastRawJSON);
+                copyBtn.textContent = '✅ Copied!';
+                copyBtn.classList.add('copied');
+                setTimeout(() => {
+                    copyBtn.textContent = '📋 Copy JSON';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                const textarea = document.createElement('textarea');
+                textarea.value = lastRawJSON;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    copyBtn.textContent = '✅ Copied!';
+                    copyBtn.classList.add('copied');
+                    setTimeout(() => {
+                        copyBtn.textContent = '📋 Copy JSON';
+                        copyBtn.classList.remove('copied');
+                    }, 2000);
+                } catch (e) {
+                    alert('Failed to copy to clipboard.');
+                }
+                document.body.removeChild(textarea);
+            }
+        }
+
+        // Keyboard shortcut: Ctrl+Enter to fetch
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                if (!fetchBtn.disabled) fetchData();
+            }
+        });
+    </script>
+</body>
+  </html>
