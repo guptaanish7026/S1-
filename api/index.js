@@ -88,7 +88,7 @@ app.all('/', (req, res) => {
     status: 'ok',
     message: 'Proxy server is running. Use /api/... for default proxy or /v1/... for direct versioned proxies.',
     usage: {
-      default: '/api/batches',
+      default: '/health',
       versioned: '/v1/api/batches'
     }
   });
