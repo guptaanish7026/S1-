@@ -81,6 +81,18 @@ function sendError(res, statusCode, message, details = null) {
   if (details) payload.error = details;
   res.status(statusCode).json(payload);
 }
+// --------------- HOME ROUTE (no proxy) ---------------
+app.all('/', (req, res) => {
+  // You can customise this response as you wish
+  res.json({
+    status: 'ok',
+    message: 'Proxy server is running. Use /api/... for default proxy or /v1/... for direct versioned proxies.',
+    usage: {
+      default: '/api/batches',
+      versioned: '/v1/api/batches'
+    }
+  });
+});
 
 // --------------- HEALTH ROUTE ---------------
 app.get('/health', (req, res) => {
